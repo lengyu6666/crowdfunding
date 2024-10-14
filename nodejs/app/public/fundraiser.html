@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fundraiser Details</title>
+    <style>
+        .navbar {
+            display: flex;
+            justify-content: space-around;
+            background-color: #333;
+            padding: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 14px 20px;
+            font-size: 16px;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .fundraiser-details {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-top: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .donation-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .donation-table th, .donation-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .donation-table th {
+            background-color: #f2f2f2;
+        }
+
+        .donate-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .donate-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <a href="./index.html">Home</a>
+        <a href="./search.html">Search</a>
+        <a href="./fundraiser.html">Details</a>
+        <a href="./admin.html">Admin</a>
+    </div>
+    <div class="content">
+        <h1>Fundraiser Details</h1>
+        <div id="fundraiserDetails" class="fundraiser-details"></div>
+        <div id="donationTableContainer"></div>
+        <button class="donate-btn" onclick="donate()">Donate</button>
+    </div>
+
+    <script>
+         const fundraiserId = getUrlParam('id');
+        function getUrlParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+        let currentOrganizer;
+        async function loadFundraiserDetails() {
+       
+            if (!fundraiserId) {
+                document.getElementById('fundraiserDetails').innerText = "No fundraiser selected.";
+                return;
+            }
+
+            const categoryMapping = {
+                '1': 'Education',
+                '2': 'Animal Welfare',
+                '3': 'Environmental Protection',
+                '4': 'Community Development',
+                '5': 'Arts and Culture'
+            };
+        
+
+            try {
+                const response = await fetch(`http://127.0.0.1:3001/api/all/getUserById?id=${fundraiserId}`);
+                const data = await response.json();
+
+                if (data.code === 200 && data.data) {
+                    const fundraiser = data.data;
+                    currentOrganizer = fundraiser.ORGANIZER;
+                    const categoryName = categoryMapping[fundraiser.CATEGORY_ID] || 'Unknown';
+                    const detailsHtml = `
+                        <div>
+                            <h2>${fundraiser.CAPTION}</h2>
+                            <p><strong>Organizer:</strong> ${fundraiser.ORGANIZER}</p>
+                            <p><strong>City:</strong> ${fundraiser.CITY}</p>
+                            <p><strong>Target Funding:</strong> ${fundraiser.TARGET_FUNDING}</p>
+                            <p><strong>Current Funding:</strong> ${fundraiser.CURRENT_FUNDING}</p>
+                            <p><strong>Category:</strong> ${categoryName}</p>
+                            <p><strong>Status:</strong> ${fundraiser.ACTIVE === "1" ? "Active" : "Inactive"}</p>
+                        </div>
+                    `;
+                    document.getElementById('fundraiserDetails').innerHTML = detailsHtml;
+
+                    // If there are donation records, generate a table
+                    if (fundraiser.donations && Array.isArray(fundraiser.donations) && fundraiser.donations.length > 0) {
+                        let tableHtml = `
+                            <h3>Donation Records</h3>
+                            <table class="donation-table">
+                                <thead>
+                                    <tr>
+                                        <th>Donor Name</th>
+                                        <th>Amount</th>
+                                        <th>Donation Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        console.log(fundraiser.donations,'fundraiser.donationsfundraiser.donations')
+                        fundraiser.donations.forEach(donation => {
+                            tableHtml += `
+                                <tr>
+                                    <td>${donation.donors || 'Unknown'}</td>
+                                    <td>${donation.money || 'N/A'}</td>
+                                    <td>${donation.date ? new Date(donation.date).toLocaleDateString() : 'N/A'}</td>
+                                </tr>
+                            `;
+                        });
+
+                        tableHtml += `
+                                </tbody>
+                            </table>
+                        `;
+                        document.getElementById('donationTableContainer').innerHTML = tableHtml;
+                    } else {
+                        document.getElementById('donationTableContainer').innerHTML = "<p>No donation records found.</p>";
+                    }
+                } else {
+                    document.getElementById('fundraiserDetails').innerHTML = "<p>No details found for this fundraiser.</p>";
+                }
+            } catch (error) {
+                console.error('Error fetching fundraiser details:', error);
+                document.getElementById('fundraiserDetails').innerHTML = "<p>Error loading fundraiser details.</p>";
+            }
+}
+
+
+        function donate() {
+     
+            console.log(fundraiserId)
+            if (fundraiserId && currentOrganizer) {
+                window.location.href = `donation.html?fundraiserId=${fundraiserId}&organizer=${encodeURIComponent(currentOrganizer)}`; 
+            } else {
+                alert("No fundraiser selected.");
+            }
+            
+        }
+
+        window.onload = loadFundraiserDetails;
+    </script>
+
+</body>
+
+</html>

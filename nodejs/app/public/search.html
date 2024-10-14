@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Fundraisers</title>
+    <style>
+        body {
+            /*Set font*/
+            font-family: Arial, sans-serif;
+            display: flex;
+             /*Vertical arrangement*/
+            flex-direction: column;
+             /*The minimum height is the window height*/
+            min-height: 100vh;
+             /*Remove default margins*/
+            margin: 0;
+            /*Background color*/
+            background-color: #f9f9f9;
+        }
+
+        .error {
+            /*Error message color*/
+            color: red;
+            /*Bold*/
+            font-weight: bold;
+        }
+
+        .navbar {
+            display: flex;
+             /*Content centered alignment*/
+            justify-content: space-around;
+            /*Navigation bar background color*/
+            background-color: #333;
+            /*Navigation bar margin*/
+            padding: 10px;
+            /*Navigation bar width*/
+            width: 100%;
+        }
+
+        .navbar a {
+           /*Link color*/
+            color: white;
+            /*Remove the underline*/
+            text-decoration: none;
+             /*Link margin*/
+            padding: 14px 20px;
+            /*Font size*/
+            font-size: 16px;
+        }
+
+        .navbar a:hover {
+            /*Background color when hovering the mouse*/
+            background-color: #ddd;
+            /*Text color when hovering over the mouse*/
+            color: black;
+        }
+
+        .content {
+            /*Inner margin of content area*/
+            padding: 20px;
+             /*Horizontal centering*/
+            margin: 0 auto;
+
+        }
+
+        #searchForm {
+             /*Background color*/
+            background: white;
+            /*Inner margin*/
+            padding: 20px;
+            /*Rounded corners*/
+            border-radius: 5px;
+            /*Shadow effect*/
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            /*Form width*/
+            width: 300px;
+        }
+
+        .fundraiser-list a {
+            /*Link color*/
+            color: blue;
+            /*Remove the underline*/
+            text-decoration: none;
+        }
+
+        .fundraiser-list a:hover {
+            /*Display underline when hovering over the mouse*/
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <a href="./index.html">Home</a>
+        <a href="./search.html">Search</a>
+        <a href="./fundraiser.html">Details</a>
+        <a href="./admin.html">Admin</a>
+    </div>
+    <div class="content">
+        <h1>Search Fundraisers</h1>
+        <form id="searchForm">
+            <label for="organizer">Organizer:</label>
+            <input style="width: 100%" type="text" id="organizer" name="organizer"><br><br>
+
+            <label for="city">City:</label>
+            <input style="width: 100%" type="text" id="city" name="city"><br><br>
+
+            <label for="category">Category:</label>
+            <select style="width: 100%" id="category" name="category">
+                <option value="">Select Category</option>
+            </select><br><br>
+            <div style="text-align: right;">
+                <button type="button" onclick="searchFundraisers()">Search</button>
+                <button type="button" onclick="clearCheckboxes()">Clear</button>
+            </div>
+        </form>
+
+        <p id="errorMsg" class="error" style="display: none;">Please select at least one search criteria!</p>
+        <p id="noResultMsg" class="error" style="display: none;">No fundraisers found!</p>
+        <ul id="fundraiserList" class="fundraiser-list"></ul>
+    </div>
+
+    <script>
+        function clearCheckboxes() {
+            //Reset Form
+            document.getElementById('searchForm').reset();
+            //Hide error messages
+            document.getElementById('errorMsg').style.display = 'none';
+            //Hide no result information
+            document.getElementById('noResultMsg').style.display = 'none';
+            //Clear List
+            document.getElementById('fundraiserList').innerHTML = '';
+        }
+        async function searchFundraisers() {
+           //Get organizer
+            const organizer = document.getElementById('organizer').value;
+            //Get City
+            const city = document.getElementById('city').value;
+           //Get category
+            const category = document.getElementById('category').value;
+            //Select at least one search criterion
+            if (!organizer && !city && !category) {
+                document.getElementById('errorMsg').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('errorMsg').style.display = 'none';
+            }
+            //Initiate a request to obtain fundraising data
+            try {
+                //Initiate a GET request to the specified URL
+                const response = await fetch(`http://127.0.0.1:3001/api/all/getUserByOther?organizer=${organizer}&city=${city}&categoryId=${category}`);
+                 // Parse the response body in JSON format
+                const data = await response.json();
+                // Clear the existing content of the element used to display the fundraising list
+                document.getElementById('fundraiserList').innerHTML = '';
+                 // Hide elements displaying 'no results' information
+                document.getElementById('noResultMsg').style.display = 'none';
+                if (data.code === 200 && data.data.length > 0) {
+                    // If the data is valid, traverse the data array
+                    data.data.forEach(fundraiser => {
+                        // Set the HTML content of the list items and create a link to the fundraising details page
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `<a href="fundraiser.html?id=${fundraiser.FUNDRAISER_ID}">${fundraiser.ORGANIZER} - ${fundraiser.CAPTION}</a>`;
+                         // Add list items to the fundraising list element
+                        document.getElementById('fundraiserList').appendChild(listItem);
+                    });
+                } else {
+                    // If there is no valid data, display no results
+                    document.getElementById('noResultMsg').style.display = 'block';
+                }
+            } catch (error) {
+                 // If an error occurs, the console will print an error message
+                console.error('Error fetching fundraisers:', error);
+            }
+        }
+        async function loadCategories() {
+            try {
+                //Send a GET request to the server to retrieve all fundraising categories
+                const response = await fetch('http://127.0.0.1:3001/api/all/getAllCategory');
+                //Waiting for response and parsing into JSON format
+                const data = await response.json();
+
+                if (data.code === 200 && data.data.length > 0) {
+                    //Retrieve the dropdown selection box element with the ID 'category'
+                    const categorySelect = document.getElementById('category');
+                    //Traverse the returned category data
+                    data.data.forEach(category => {
+                        const option = document.createElement('option');
+                       //Set the value of the option element to its CATEGORY-ID
+                        option.value = category.CATEGORY_ID;
+                         //Set the display text of the option element to its NAME
+                        option.text = category.NAME;
+                        //Add the option element to the dropdown selection box
+                        categorySelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                //If an error occurs, print the error message to the console
+                console.error('Error fetching categories:', error);
+            }
+        }
+        //Window loading event
+        window.onload = function () {
+            loadCategories();
+        };
+    </script>
+
+</body>
+
+</html>
